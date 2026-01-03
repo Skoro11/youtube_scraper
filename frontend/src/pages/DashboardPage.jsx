@@ -192,7 +192,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       <Navbar />
-      {JSON.stringify(tasks)}
+
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex gap-4 overflow-x-auto pb-4">
           <div
@@ -309,7 +309,7 @@ export default function DashboardPage() {
                   </label>
                   <input
                     type="text"
-                    name="task_name"
+                    name="name"
                     value={formData.task_name}
                     onChange={handleInputChange}
                     required
@@ -323,7 +323,7 @@ export default function DashboardPage() {
                   </label>
                   <input
                     type="text"
-                    name="repository_branch"
+                    name="branch"
                     value={formData.repository_branch}
                     onChange={handleInputChange}
                     required
@@ -337,7 +337,7 @@ export default function DashboardPage() {
                   </label>
                   <input
                     type="text"
-                    name="project_name"
+                    name="project"
                     value={formData.project_name}
                     onChange={handleInputChange}
                     required
@@ -350,7 +350,7 @@ export default function DashboardPage() {
                     Task Description *
                   </label>
                   <textarea
-                    name="task_description"
+                    name="description"
                     value={formData.task_description}
                     onChange={handleInputChange}
                     required
@@ -547,7 +547,7 @@ export default function DashboardPage() {
                   </label>
                   <input
                     type="text"
-                    name="task_name"
+                    name="name"
                     value={formData.task_name}
                     onChange={handleInputChange}
                     required
@@ -561,7 +561,7 @@ export default function DashboardPage() {
                   </label>
                   <input
                     type="text"
-                    name="repository_branch"
+                    name="branch"
                     value={formData.repository_branch}
                     onChange={handleInputChange}
                     required
@@ -575,7 +575,7 @@ export default function DashboardPage() {
                   </label>
                   <input
                     type="text"
-                    name="project_name"
+                    name="project"
                     value={formData.project_name}
                     onChange={handleInputChange}
                     required
@@ -588,7 +588,7 @@ export default function DashboardPage() {
                     Task Description *
                   </label>
                   <textarea
-                    name="task_description"
+                    name="description"
                     value={formData.task_description}
                     onChange={handleInputChange}
                     required
@@ -618,10 +618,10 @@ export default function DashboardPage() {
                       setSelectedTask(null);
                       setFormData({
                         id: null,
-                        task_name: "",
-                        repository_branch: "",
-                        project_name: "",
-                        task_description: "",
+                        name: "",
+                        branch: "",
+                        project: "",
+                        description: "",
                         deadline: "",
                       });
                     }}

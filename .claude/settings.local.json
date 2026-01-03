@@ -5,7 +5,18 @@
       "Bash(npm install:*)",
       "WebFetch(domain:www.npmjs.com)",
       "WebSearch",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(docker --version:*)",
+      "Bash(docker start:*)",
+      "Bash(docker run:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker exec:*)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(xargs:*)",
+      "Bash(taskkill //F //PID 3756)",
+      "Bash(taskkill //F //PID 4400)"
     ]
   }
 }
