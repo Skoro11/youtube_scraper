@@ -1,27 +1,31 @@
 import express from "express";
 import {
-  createTaskController,
-  getTasksController,
-  getTaskController,
-  updateTaskController,
-  deleteTaskController,
+  createLinkController,
+  getLinksController,
+  getLinkController,
+  updateLinkController,
+  deleteLinkController,
+  updateStatusController,
 } from "../controllers/taskController.js";
 
 const router = express.Router();
 
-// POST /tasks
-router.post("/", createTaskController);
+// POST /links - Create new YouTube link
+router.post("/", createLinkController);
 
-// GET /tasks
-router.get("/:userId", getTasksController);
+// GET /links/:userId - Get all links for a user
+router.get("/:userId", getLinksController);
 
-// GET /tasks/:taskId
-router.get("/:taskId/:userId", getTaskController);
+// GET /links/:linkId/:userId - Get single link
+router.get("/:linkId/:userId", getLinkController);
 
-// PUT /tasks/:taskId
-router.put("/:taskId", updateTaskController);
+// PUT /links/:linkId - Update link
+router.put("/:linkId", updateLinkController);
 
-// DELETE /tasks/:taskId
-router.delete("/:taskId", deleteTaskController);
+// DELETE /links/:linkId - Delete link
+router.delete("/:linkId", deleteLinkController);
+
+// PATCH /links/:linkId/status - Update link status
+router.patch("/:linkId/status", updateStatusController);
 
 export default router;

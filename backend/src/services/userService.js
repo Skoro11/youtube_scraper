@@ -23,6 +23,19 @@ export async function findUser(email) {
   }
 }
 
+export async function findUserById(user_id) {
+  const result = await client.query(
+    `
+    SELECT id, email, created_at
+    FROM users
+    WHERE id = $1
+    `,
+    [user_id]
+  );
+
+  return result.rows[0];
+}
+
 export async function deleteUser(email) {
   try {
     const result = await client.query(

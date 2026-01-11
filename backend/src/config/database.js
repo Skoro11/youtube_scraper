@@ -34,21 +34,19 @@ client.query(
 
 client.query(
   `
-  CREATE TABLE IF NOT EXISTS tasks (
+  CREATE TABLE IF NOT EXISTS youtube_links (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
-  task_name VARCHAR(100) NOT NULL,
-  repository_branch VARCHAR(100),
-  project_name VARCHAR(100),
+  title VARCHAR(255) NOT NULL,
+  youtube_url VARCHAR(500) NOT NULL,
+  notes TEXT,
   status VARCHAR(100) DEFAULT 'pending',
-  task_description TEXT,
-  deadline TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 `,
   (err, res) => {
     if (!err) {
-      console.log("Task table created successfully");
+      console.log("YouTube Links table created successfully");
     } else {
       console.log("Error ", err.message);
     }

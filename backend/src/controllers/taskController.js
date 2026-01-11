@@ -1,124 +1,125 @@
 import {
-  createTask,
-  getTasksByUser,
-  getTaskById,
-  updateTask,
-  deleteTask,
+  createLink,
+  getLinksByUser,
+  getLinkById,
+  updateLink,
+  deleteLink,
+  updateLinkStatus,
 } from "../services/taskService.js";
 
-export async function createTaskController(req, res) {
+export async function createLinkController(req, res) {
   try {
-    const {
-      user_id,
-      task_name,
-      repository_branch,
-      project_name,
-      task_description,
-      deadline,
-    } = req.body;
+    const { user_id, title, youtube_url, notes } = req.body;
 
-    if (!task_name) {
-      return res.status(400).json({ message: "Task name is required" });
+    if (!youtube_url) {
+      return res.status(400).json({ message: "YouTube URL is required" });
     }
 
-    const task = await createTask(
-      user_id,
-      task_name,
-      repository_branch,
-      project_name,
-      task_description,
-      deadline
-    );
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
 
-    res.status(201).json({ message: "Task created", task });
+    const link = await createLink(user_id, title, youtube_url, notes);
+
+    res.status(201).json({ message: "Link created and sent to webhook", link });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
-export async function getTasksController(req, res) {
+export async function getLinksController(req, res) {
   try {
     const { userId: user_id } = req.params;
 
-    const tasks = await getTasksByUser(user_id);
+    const links = await getLinksByUser(user_id);
 
-    res.status(200).json({ tasks });
+    res.status(200).json({ links });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
-export async function getTaskController(req, res) {
+export async function getLinkController(req, res) {
   try {
-    const { taskId: task_id, userId: user_id } = req.params;
+    const { linkId: link_id, userId: user_id } = req.params;
 
-    if (!task_id) {
-      return res.status(400).json({ message: "Task ID is required" });
+    if (!link_id) {
+      return res.status(400).json({ message: "Link ID is required" });
     }
 
-    const task = await getTaskById(task_id, user_id);
+    const link = await getLinkById(link_id, user_id);
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+    if (!link) {
+      return res.status(404).json({ message: "Link not found" });
     }
 
-    res.status(200).json({ task });
+    res.status(200).json({ link });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
-export async function updateTaskController(req, res) {
+export async function updateLinkController(req, res) {
   try {
-    const { taskId: task_id } = req.params;
-    const {
-      task_name,
-      repository_branch,
-      project_name,
-      status,
-      task_description,
-      deadline,
-    } = req.body;
+    const { linkId: link_id } = req.params;
+    const { title, youtube_url, notes } = req.body;
 
-    if (!task_id) {
-      return res.status(400).json({ message: "Task ID is required" });
+    if (!link_id) {
+      return res.status(400).json({ message: "Link ID is required" });
     }
 
-    const updatedTask = await updateTask(
-      task_id,
-      task_name,
-      repository_branch,
-      project_name,
-      status,
-      task_description,
-      deadline
-    );
+    const updatedLink = await updateLink(link_id, title, youtube_url, notes);
 
-    if (!updatedTask) {
-      return res.status(404).json({ message: "Task not found or not allowed" });
+    if (!updatedLink) {
+      return res.status(404).json({ message: "Link not found or not allowed" });
     }
 
-    res.status(200).json({ message: "Task updated", task: updatedTask });
+    res.status(200).json({ message: "Link updated", link: updatedLink });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
-export async function deleteTaskController(req, res) {
+export async function deleteLinkController(req, res) {
   try {
-    const { taskId: task_id, userId: user_id } = req.params;
+    const { linkId: link_id, userId: user_id } = req.params;
 
-    if (!task_id) {
-      return res.status(400).json({ message: "Task ID is required" });
+    if (!link_id) {
+      return res.status(400).json({ message: "Link ID is required" });
     }
 
-    const deleted = await deleteTask(task_id, user_id);
+    const deleted = await deleteLink(link_id, user_id);
 
     if (!deleted) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ message: "Link not found" });
     }
 
-    res.status(200).json({ message: "Task deleted" });
+    res.status(200).json({ message: "Link deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+export async function updateStatusController(req, res) {
+  try {
+    const { linkId: link_id } = req.params;
+    const { status } = req.body;
+
+    if (!link_id) {
+      return res.status(400).json({ message: "Link ID is required" });
+    }
+
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    const updatedLink = await updateLinkStatus(link_id, status);
+
+    if (!updatedLink) {
+      return res.status(404).json({ message: "Link not found" });
+    }
+
+    res.status(200).json({ message: "Status updated", link: updatedLink });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
