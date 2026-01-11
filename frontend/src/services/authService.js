@@ -8,7 +8,8 @@ export async function registerUser(email) {
 
     return response;
   } catch (error) {
-    console.log(error.message);
+    console.error("Register user error:", error.message);
+    throw error;
   }
 }
 
@@ -17,6 +18,7 @@ export async function loginUser(email) {
     const response = await api.post(`/api/users/${email}`);
     return response;
   } catch (error) {
-    console.log(error.message);
+    console.error("Login user error:", error.message);
+    throw error;
   }
 }

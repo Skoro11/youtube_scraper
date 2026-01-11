@@ -5,7 +5,33 @@
       "Bash(npm install:*)",
       "WebFetch(domain:www.npmjs.com)",
       "WebSearch",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(docker --version:*)",
+      "Bash(docker start:*)",
+      "Bash(docker run:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker exec:*)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(xargs:*)",
+      "Bash(taskkill //F //PID 3756)",
+      "Bash(taskkill //F //PID 4400)",
+      "Bash(tree:*)",
+      "Bash(node tests/api.test.js:*)",
+      "Bash(node tests/e2e.test.js:*)",
+      "Bash(npm test)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(npm run test)",
+      "Bash(npm run test:user:*)",
+      "Bash(npm run test:webhook:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(npm install:*)",
+      "Bash(echo:*)",
+      "WebFetch(domain:docs.n8n.io)",
+      "Bash(git add -A)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": []
 }

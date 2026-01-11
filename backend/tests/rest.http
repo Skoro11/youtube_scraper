@@ -1,12 +1,17 @@
 @BASE_URL=http://localhost:3000
+@N8N_WORKFLOW=https://primary-ar96-production.up.railway.app/webhook-test/714ec72e-d6fa-468a-8350-a0f755109e0f
+@N8N_CHAT=https://primary-ar96-production.up.railway.app/webhook-test/ba83f501-df13-4e32-af6d-2cdeac981de9
 
 
 ### n8n automation webhook
-POST http://localhost:5678/webhook-test/fb755256-d121-4692-b56b-86c3cd2419f6
+POST {{N8N_WORKFLOW}}
 Content-Type: application/json
 
 {
-    "body":"Hello n8n"
+    "use":"chat",
+    "email":"skoro@gmail.com",
+    "title":"Zlatan",
+    "youtube_url":"https://www.youtube.com/watch?v=Npsg0UvEGIw"
 }
 
 
@@ -31,39 +36,34 @@ POST {{BASE_URL}}/api/tasks
 Content-Type: application/json
 
 {
-    "user_id": 22,
-    "task_name": "Finish backend routes",
-    "repository_branch": "main",
-    "project_name": "NodeJS API",
-    "task_description": "Implement all CRUD endpoints for tasks",
-    "deadline": "2026-01-10T12:00:00Z"
+    "user_id":54,
+    "email":"skoro.toni01@gmail.com",
+    "title":"Zlatan",
+    "youtube_url":"https://somevideo.dfsd",
+    "notes":"Some notes"
 }
 
 
 ### Get all tasks based on userId
-GET {{BASE_URL}}/api/tasks/22
+GET {{BASE_URL}}/api/tasks/54
 
 
-### Get single task by taskId ans userId
+### Get single task by taskId
 
-GET {{BASE_URL}}/api/tasks/2/3
+GET {{BASE_URL}}/api/tasks/7
 
 
 ### Update task
 #taskId
-PUT {{BASE_URL}}/api/tasks/18
+PUT {{BASE_URL}}/api/tasks/1
 Content-Type: application/json
 
 {
-    "task_name": "Finish backend routes updated",
-    "repository_branch": "develop",
-    "project_name": "NodeJS API",
-    "status": "pending",
-    "task_description": "Updated description for task",
-    "deadline": "2026-01-12T18:00:00Z"
+    "title":"Something else",
+    "notes":"Some other notes"
 }
 
 
 ### Delete task
 #taskId
-DELETE {{BASE_URL}}/api/tasks/18
+DELETE {{BASE_URL}}/api/tasks/1

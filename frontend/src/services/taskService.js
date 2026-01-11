@@ -1,67 +1,78 @@
 import api from "./axiosInstance";
-
-export async function createTask(
-  user_id,
-  task_name,
-  repository_branch,
-  project_name,
-  task_description,
-  deadline
-) {
+import axios from "axios";
+export async function createLink(user_id, title, youtube_url, notes) {
   try {
     const response = await api.post("/api/tasks", {
       user_id: user_id,
-      task_name: task_name,
-      repository_branch: repository_branch,
-      project_name: project_name,
-      task_description: task_description,
-      deadline: deadline,
+      title: title,
+      youtube_url: youtube_url,
+      notes: notes,
     });
 
     return response;
   } catch (error) {
-    console.log(error.message);
+    console.error("Create link error:", error.message);
+    throw error;
   }
 }
 
-export async function editTask(
-  taskId,
-  task_name,
-  repository_branch,
-  project_name,
-  task_description,
-  deadline,
-  status
-) {
+export async function editLink(linkId, title, youtube_url, notes) {
   try {
-    const response = await api.put(`/api/tasks/${taskId}`, {
-      task_name: task_name,
-      repository_branch: repository_branch,
-      project_name: project_name,
-      task_description: task_description,
-      deadline: deadline,
-      status: status,
+    const response = await api.put(`/api/tasks/${linkId}`, {
+      title: title,
+      youtube_url: youtube_url,
+      notes: notes,
     });
     return response;
   } catch (error) {
-    console.log(error.message);
+    console.error("Edit link error:", error.message);
+    throw error;
   }
 }
 
-export async function getTasks(user_id) {
+export async function getLinks(user_id) {
   try {
     const response = await api.get(`/api/tasks/${user_id}`);
     return response;
   } catch (error) {
-    console.log(error.message);
+    console.error("Get links error:", error.message);
+    throw error;
   }
 }
 
-export async function deleteTaskById(task_id) {
+export async function deleteLinkById(link_id) {
   try {
-    const response = await api.delete(`/api/tasks/${task_id}`);
+    const response = await api.delete(`/api/tasks/${link_id}`);
     return response;
   } catch (error) {
-    console.log(error.message);
+    console.error("Delete link error:", error.message);
+    throw error;
+  }
+}
+
+export async function getTranscript(email, title, youtube_url) {
+  try {
+    console.log(import.meta.env.VITE_N8N_WEBHOOK_URL);
+    const response = await axios.post(import.meta.env.VITE_N8N_WEBHOOK_URL, {
+      email: email,
+      title: title,
+      youtube_url: youtube_url,
+    });
+    return response;
+  } catch (error) {
+    console.log("Get trascript error", error.message);
+    throw error;
+  }
+}
+
+export async function updateLinkStatus(linkId, status) {
+  try {
+    const response = await api.patch(`/api/tasks/${linkId}/status`, {
+      status: status,
+    });
+    return response;
+  } catch (error) {
+    console.error("Update status error:", error.message);
+    throw error;
   }
 }

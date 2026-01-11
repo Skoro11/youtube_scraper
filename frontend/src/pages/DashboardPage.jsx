@@ -1,28 +1,36 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
-import { createTask, deleteTaskById } from "../services/taskService";
-import { getTasks } from "../services/taskService";
-import { editTask } from "../services/taskService";
+import {
+  createLink,
+  deleteLinkById,
+  getLinks,
+  editLink,
+  getTranscript,
+  updateLinkStatus,
+} from "../services/taskService";
+
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedLink, setSelectedLink] = useState(null);
   const [filter, setFilter] = useState("all");
-  const [tasks, setTasks] = useState([]);
+  const [links, setLinks] = useState([]);
+  const [isTranscriptLoading, setIsTranscriptLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [user, setUser] = useState({
     id: null,
     email: "",
   });
   const navigate = useNavigate();
+
   useEffect(() => {
     const userInfo = localStorage.getItem("user");
-    console.log("UserInfo", userInfo);
 
     if (userInfo) {
       const parsedUser = JSON.parse(userInfo);
-
       setUser({
         id: parsedUser._id,
         email: parsedUser.email,
@@ -34,22 +42,23 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user.id) return;
-
-    fetchTasksDb();
+    fetchLinksDb();
   }, [user.id]);
 
-  async function fetchTasksDb() {
-    const response = await getTasks(user.id);
-    setTasks(response.data.tasks);
+  async function fetchLinksDb() {
+    try {
+      const response = await getLinks(user.id);
+      setLinks(response.data.links);
+    } catch (error) {
+      console.error("Failed to fetch links:", error);
+    }
   }
 
   const [formData, setFormData] = useState({
-    task_id: null,
-    task_name: "Stripe implementation",
-    repository_branch: "feature/implement",
-    project_name: "E-Commerce",
-    task_description: "Add stripe as payment method",
-    deadline: "",
+    id: null,
+    title: "",
+    youtube_url: "",
+    notes: "",
   });
 
   const handleInputChange = (e) => {
@@ -60,109 +69,94 @@ export default function DashboardPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const response = await createTask(
-      user.id,
-      formData.task_name,
-      formData.repository_branch,
-      formData.project_name,
-      formData.task_description,
-      formData.deadline
-    );
+    try {
+      const response = await createLink(
+        user.id,
+        formData.title,
+        formData.youtube_url,
+        formData.notes
+      );
 
-    const newTask = response.data.task;
-    setTasks((prev) => [...prev, newTask]);
-    setFormData({
-      id: null,
-      task_name: "",
-      repository_branch: "",
-      project_name: "",
-      task_description: "",
-      deadline: "",
-    });
-    setIsModalOpen(false);
-  }
-
-  async function handleDeleteTask(task_id) {
-    const response = await deleteTaskById(task_id);
-
-    if (response) {
-      const filteredTasks = tasks.filter((task) => task.id != task_id);
-
-      setTasks(filteredTasks);
+      const newLink = response.data.link;
+      setLinks((prev) => [newLink, ...prev]);
+      setFormData({
+        id: null,
+        title: "",
+        youtube_url: "",
+        notes: "",
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to create link:", error);
+      alert("Failed to create link. Please try again.");
     }
   }
 
-  const handleViewTask = (task) => {
-    setSelectedTask(task);
+  async function handleDeleteLink(link_id) {
+    try {
+      const response = await deleteLinkById(link_id);
+      if (response) {
+        const filteredLinks = links.filter((link) => link.id != link_id);
+        setLinks(filteredLinks);
+      }
+    } catch (error) {
+      console.error("Failed to delete link:", error);
+      alert("Failed to delete link. Please try again.");
+    }
+  }
+
+  const handleViewLink = (link) => {
+    setSelectedLink(link);
     setIsViewModalOpen(true);
   };
 
-  const handleEditTask = (task) => {
-    setSelectedTask(task);
+  const handleEditLink = (link) => {
+    setSelectedLink(link);
     setFormData({
-      id: task.id,
-      task_name: task.task_name,
-      repository_branch: task.repository_branch,
-      project_name: task.project_name,
-      task_description: task.task_description,
-      deadline: task.deadline,
+      id: link.id,
+      title: link.title,
+      youtube_url: link.youtube_url,
+      notes: link.notes,
+      status: link.status,
     });
     setIsEditModalOpen(true);
   };
 
-  async function handleUpdateTask(e) {
+  async function handleUpdateLink(e) {
     e.preventDefault();
 
-    console.log(formData);
-    const response = await editTask(
-      formData.id,
-      formData.task_name,
-      formData.repository_branch,
-      formData.project_name,
-      formData.task_description,
-      formData.deadline,
-      formData.status
-    );
+    try {
+      const response = await editLink(
+        formData.id,
+        formData.title,
+        formData.youtube_url,
+        formData.notes
+      );
 
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === selectedTask.id ? { ...task, ...formData } : task
-      )
-    );
-    /* setFormData({
-      name: "",
-      branch: "",
-      project: "",
-      description: "",
-      deadline: "",
-    }); */
-    setIsEditModalOpen(false);
-    setSelectedTask(null);
+      const updatedLink = response.data.link;
+      setLinks((prev) =>
+        prev.map((link) => (link.id === selectedLink.id ? updatedLink : link))
+      );
+      setIsEditModalOpen(false);
+      setSelectedLink(null);
+    } catch (error) {
+      console.error("Failed to update link:", error);
+      alert("Failed to update link. Please try again.");
+    }
   }
 
   const getStatusStyle = (status) => {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-800";
-      case "in_progress":
-        return "bg-orange-100 text-orange-800";
-      case "completed":
+      case "sent":
+        return "bg-blue-100 text-blue-800";
+      case "processed":
         return "bg-green-100 text-green-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "pending":
-        return "⏳";
-      case "in_progress":
-        return "⚙️";
-      case "completed":
-        return "✅";
-      default:
-        return "📋";
     }
   };
 
@@ -170,29 +164,126 @@ export default function DashboardPage() {
     switch (status) {
       case "pending":
         return "Pending";
-      case "in_progress":
-        return "In Progress";
-      case "completed":
-        return "Completed";
+      case "sent":
+        return "Sent";
+      case "processed":
+        return "Processed";
+      case "failed":
+        return "Failed";
       default:
         return status;
     }
   };
 
-  const filteredTasks =
-    filter === "all" ? tasks : tasks.filter((task) => task.status === filter);
+  async function sendWebhook(linkId, email, title, youtube_url) {
+    setIsTranscriptLoading(true);
+    try {
+      const response = await getTranscript(email, title, youtube_url);
+      console.log("SendHookItems", email, title, youtube_url);
+      console.log("Response from n8n", response);
 
-  const taskCounts = {
-    all: tasks.length,
-    pending: tasks.filter((t) => t.status === "pending").length,
-    in_progress: tasks.filter((t) => t.status === "in_progress").length,
-    completed: tasks.filter((t) => t.status === "completed").length,
+      if (response.status === 200) {
+        await updateLinkStatus(linkId, "processed");
+        setLinks((prev) =>
+          prev.map((link) =>
+            link.id === linkId ? { ...link, status: "processed" } : link
+          )
+        );
+        setToast({
+          show: true,
+          message: "Transcript sent successfully!",
+          type: "success",
+        });
+      } else {
+        await updateLinkStatus(linkId, "failed");
+        setLinks((prev) =>
+          prev.map((link) =>
+            link.id === linkId ? { ...link, status: "failed" } : link
+          )
+        );
+        setToast({
+          show: true,
+          message: "Failed to send transcript",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error sending webhook:", error);
+      await updateLinkStatus(linkId, "failed");
+      setLinks((prev) =>
+        prev.map((link) =>
+          link.id === linkId ? { ...link, status: "failed" } : link
+        )
+      );
+      setToast({
+        show: true,
+        message: "Error sending transcript",
+        type: "error",
+      });
+    } finally {
+      setIsTranscriptLoading(false);
+      setIsViewModalOpen(false);
+      setSelectedLink(null);
+      setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
+    }
+  }
+
+  // Open chat - sends webhook and redirects to n8n chat page
+  async function handleOpenChat(link) {
+    setIsChatLoading(true);
+    try {
+      const response = await getTranscript(
+        user.email,
+        link.title,
+        link.youtube_url
+      );
+      /* const response = "Some response"; */
+      /*  console.log("Some response", response); */
+      if (response.status === 200) {
+        setIsViewModalOpen(false);
+        setSelectedLink(null);
+        // Redirect to n8n chat page
+        window.open(import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL, "_blank");
+      } else {
+        setToast({
+          show: true,
+          message: "Failed to initialize chat",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error initializing chat:", error);
+      setToast({
+        show: true,
+        message: "Error connecting to chat",
+        type: "error",
+      });
+    } finally {
+      setIsChatLoading(false);
+      setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
+    }
+  }
+
+  const filteredLinks =
+    filter === "all" ? links : links.filter((link) => link.status === filter);
+
+  const linkCounts = {
+    all: links.length,
+    processed: links.filter((l) => l.status === "processed").length,
+    failed: links.filter((l) => l.status === "failed").length,
+  };
+
+  const extractVideoId = (url) => {
+    const match = url?.match(
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/
+    );
+    return match ? match[1] : null;
   };
 
   return (
     <div className="min-h-screen">
       <Navbar />
-      {JSON.stringify(tasks)}
+
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex gap-4 overflow-x-auto pb-4">
           <div
@@ -205,95 +296,110 @@ export default function DashboardPage() {
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-semibold text-sm">📋</span>
+                <svg
+                  className="w-5 h-5 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
+                </svg>
               </div>
               <div className="min-w-0">
-                <h3 className="font-medium text-gray-900">All Tasks</h3>
-                <p className="text-sm text-gray-500">{taskCounts.all} tasks</p>
+                <h3 className="font-medium text-gray-900">All Links</h3>
+                <p className="text-sm text-gray-500">{linkCounts.all} links</p>
               </div>
             </div>
           </div>
           <div
-            onClick={() => setFilter("pending")}
+            onClick={() => setFilter("processed")}
             className={`bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer border flex-shrink-0 ${
-              filter === "pending"
-                ? "border-yellow-500 ring-2 ring-yellow-200"
-                : "border-gray-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                <span className="text-yellow-600 font-semibold text-sm">
-                  ⏳
-                </span>
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-medium text-gray-900">Pending</h3>
-                <p className="text-sm text-gray-500">
-                  {taskCounts.pending} tasks
-                </p>
-              </div>
-            </div>
-          </div>
-          <div
-            onClick={() => setFilter("in_progress")}
-            className={`bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer border flex-shrink-0 ${
-              filter === "in_progress"
-                ? "border-orange-500 ring-2 ring-orange-200"
-                : "border-gray-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                <span className="text-orange-600 font-semibold text-sm">
-                  ⚙️
-                </span>
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-medium text-gray-900">In Progress</h3>
-                <p className="text-sm text-gray-500">
-                  {taskCounts.in_progress} tasks
-                </p>
-              </div>
-            </div>
-          </div>
-          <div
-            onClick={() => setFilter("completed")}
-            className={`bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer border flex-shrink-0 ${
-              filter === "completed"
+              filter === "processed"
                 ? "border-green-500 ring-2 ring-green-200"
                 : "border-gray-200"
             }`}
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-green-600 font-semibold text-sm">✅</span>
+                <svg
+                  className="w-5 h-5 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
               </div>
               <div className="min-w-0">
-                <h3 className="font-medium text-gray-900">Completed</h3>
+                <h3 className="font-medium text-gray-900">Processed</h3>
                 <p className="text-sm text-gray-500">
-                  {taskCounts.completed} tasks
+                  {linkCounts.processed} links
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={() => setFilter("failed")}
+            className={`bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer border flex-shrink-0 ${
+              filter === "failed"
+                ? "border-red-500 ring-2 ring-red-200"
+                : "border-gray-200"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-medium text-gray-900">Failed</h3>
+                <p className="text-sm text-gray-500">
+                  {linkCounts.failed} links
                 </p>
               </div>
             </div>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center justify-center gap-2 flex-shrink-0 h-fit my-auto"
+            className="ml-auto px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center gap-2 flex-shrink-0 h-fit my-auto"
           >
-            <span>+</span> Add New Task
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+            </svg>
+            Add YouTube Link
           </button>
         </div>
       </main>
 
-      {/* Modal */}
+      {/* Create Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Create New Task
+                  Add YouTube Link
                 </h2>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -305,71 +411,43 @@ export default function DashboardPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Task Name *
+                    Title *
                   </label>
                   <input
                     type="text"
-                    name="task_name"
-                    value={formData.task_name}
+                    name="title"
+                    value={formData.title}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                    placeholder="Enter task name"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors"
+                    placeholder="Enter a title for this link"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Github Repository Branch *
+                    YouTube URL *
                   </label>
                   <input
-                    type="text"
-                    name="repository_branch"
-                    value={formData.repository_branch}
+                    type="url"
+                    name="youtube_url"
+                    value={formData.youtube_url}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                    placeholder="e.g., feature/new-feature"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors"
+                    placeholder="https://youtube.com/watch?v=..."
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Project Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="project_name"
-                    value={formData.project_name}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                    placeholder="Enter project name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Task Description *
+                    Notes
                   </label>
                   <textarea
-                    name="task_description"
-                    value={formData.task_description}
+                    name="notes"
+                    value={formData.notes}
                     onChange={handleInputChange}
-                    required
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
-                    placeholder="Describe the task..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Deadline *
-                  </label>
-                  <input
-                    type="date"
-                    name="deadline"
-                    value={formData.deadline}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors resize-none"
+                    placeholder="Add any notes about this video..."
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -382,9 +460,9 @@ export default function DashboardPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
-                    Create Task
+                    Add Link
                   </button>
                 </div>
               </form>
@@ -394,18 +472,18 @@ export default function DashboardPage() {
       )}
 
       {/* View Modal */}
-      {isViewModalOpen && selectedTask && (
+      {isViewModalOpen && selectedLink && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Task Details
+                  Link Details
                 </h2>
                 <button
                   onClick={() => {
                     setIsViewModalOpen(false);
-                    setSelectedTask(null);
+                    setSelectedLink(null);
                   }}
                   className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
                 >
@@ -415,34 +493,49 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Task Name
+                    Title
                   </label>
                   <p className="text-gray-900 font-medium">
-                    {selectedTask.task_name}
+                    {selectedLink.title}
                   </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Project Name
+                    YouTube URL
                   </label>
-                  <p className="text-gray-900">{selectedTask.project_name}</p>
+                  <a
+                    href={selectedLink.youtube_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-red-600 hover:text-red-800 break-all"
+                  >
+                    {selectedLink.youtube_url}
+                  </a>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Github Repository Branch
-                  </label>
-                  <code className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-700">
-                    {selectedTask.repository_branch}
-                  </code>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Description
-                  </label>
-                  <p className="text-gray-900 whitespace-pre-wrap">
-                    {selectedTask.task_description}
-                  </p>
-                </div>
+                {extractVideoId(selectedLink.youtube_url) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">
+                      Preview
+                    </label>
+                    <img
+                      src={`https://img.youtube.com/vi/${extractVideoId(
+                        selectedLink.youtube_url
+                      )}/mqdefault.jpg`}
+                      alt="Video thumbnail"
+                      className="rounded-lg w-full"
+                    />
+                  </div>
+                )}
+                {selectedLink.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">
+                      Notes
+                    </label>
+                    <p className="text-gray-900 whitespace-pre-wrap">
+                      {selectedLink.notes}
+                    </p>
+                  </div>
+                )}
                 <div className="flex gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1">
@@ -450,65 +543,143 @@ export default function DashboardPage() {
                     </label>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(
-                        selectedTask.status
+                        selectedLink.status
                       )}`}
                     >
-                      {getStatusIcon(selectedTask.status)}{" "}
-                      {getStatusLabel(selectedTask.status)}
+                      {getStatusLabel(selectedLink.status)}
                     </span>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">
-                      Deadline
-                    </label>
-                    <p className="text-gray-900">
-                      {new Date(selectedTask.deadline).toLocaleDateString(
-                        "en-US",
-                        {
-                          weekday: "long",
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        }
-                      )}
-                    </p>
-                  </div>
+                  <div></div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
                     Created On
                   </label>
                   <p className="text-gray-900">
-                    {new Date(selectedTask.createdAt).toLocaleDateString(
+                    {new Date(selectedLink.created_at).toLocaleDateString(
                       "en-US",
                       {
                         month: "long",
                         day: "numeric",
                         year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       }
                     )}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3 pt-6">
-                <button
-                  onClick={() => {
-                    setIsViewModalOpen(false);
-                    handleEditTask(selectedTask);
-                  }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Edit Task
-                </button>
-                <button
-                  onClick={() => {
-                    setIsViewModalOpen(false);
-                    setSelectedTask(null);
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
+              <div className="flex flex-col gap-3 pt-6">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() =>
+                      sendWebhook(
+                        selectedLink.id,
+                        user.email,
+                        selectedLink.title,
+                        selectedLink.youtube_url
+                      )
+                    }
+                    disabled={isTranscriptLoading}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isTranscriptLoading ? (
+                      <>
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Loading...
+                      </>
+                    ) : (
+                      "Get transcript"
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleOpenChat(selectedLink)}
+                    disabled={isChatLoading}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isChatLoading ? (
+                      <>
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                          />
+                        </svg>
+                        Chat
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      handleEditLink(selectedLink);
+                    }}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Edit Link
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      setSelectedLink(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -516,23 +687,21 @@ export default function DashboardPage() {
       )}
 
       {/* Edit Modal */}
-      {isEditModalOpen && selectedTask && (
+      {isEditModalOpen && selectedLink && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Edit Task</h2>
+                <h2 className="text-xl font-bold text-gray-900">Edit Link</h2>
                 <button
                   onClick={() => {
                     setIsEditModalOpen(false);
-                    setSelectedTask(null);
+                    setSelectedLink(null);
                     setFormData({
                       id: null,
-                      task_name: "",
-                      repository_branch: "",
-                      project_name: "",
-                      task_description: "",
-                      deadline: "",
+                      title: "",
+                      youtube_url: "",
+                      notes: "",
                     });
                   }}
                   className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
@@ -540,74 +709,46 @@ export default function DashboardPage() {
                   &times;
                 </button>
               </div>
-              <form onSubmit={handleUpdateTask} className="space-y-4">
+              <form onSubmit={handleUpdateLink} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Task Name *
+                    Title *
                   </label>
                   <input
                     type="text"
-                    name="task_name"
-                    value={formData.task_name}
+                    name="title"
+                    value={formData.title}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                    placeholder="Enter task name"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors"
+                    placeholder="Enter title"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Github Repository Branch *
+                    YouTube URL *
                   </label>
                   <input
-                    type="text"
-                    name="repository_branch"
-                    value={formData.repository_branch}
+                    type="url"
+                    name="youtube_url"
+                    value={formData.youtube_url}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                    placeholder="e.g., feature/new-feature"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors"
+                    placeholder="https://youtube.com/watch?v=..."
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Project Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="project_name"
-                    value={formData.project_name}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                    placeholder="Enter project name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Task Description *
+                    Notes
                   </label>
                   <textarea
-                    name="task_description"
-                    value={formData.task_description}
+                    name="notes"
+                    value={formData.notes}
                     onChange={handleInputChange}
-                    required
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
-                    placeholder="Describe the task..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Deadline *
-                  </label>
-                  <input
-                    type="date"
-                    name="deadline"
-                    value={formData.deadline}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors resize-none"
+                    placeholder="Add any notes..."
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -615,14 +756,12 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => {
                       setIsEditModalOpen(false);
-                      setSelectedTask(null);
+                      setSelectedLink(null);
                       setFormData({
                         id: null,
-                        task_name: "",
-                        repository_branch: "",
-                        project_name: "",
-                        task_description: "",
-                        deadline: "",
+                        title: "",
+                        youtube_url: "",
+                        notes: "",
                       });
                     }}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -631,7 +770,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     Save Changes
                   </button>
@@ -647,10 +786,10 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
               <h2 className="text-xl lg:text-2xl font-bold text-gray-900">
-                My Tasks
+                My YouTube Links
               </h2>
               <p className="text-gray-600 mt-1 text-sm lg:text-base">
-                Track and manage your development tasks
+                Manage your YouTube links and send them to n8n
               </p>
             </div>
           </div>
@@ -660,19 +799,13 @@ export default function DashboardPage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm lg:text-base">
-                    Task Name
+                    Title
                   </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm lg:text-base hidden md:table-cell">
-                    Project
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm lg:text-base hidden lg:table-cell">
-                    Branch
+                    YouTube URL
                   </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm lg:text-base">
                     Status
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm lg:text-base hidden sm:table-cell">
-                    Deadline
                   </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm lg:text-base">
                     Actions
@@ -680,81 +813,70 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredTasks.length === 0 ? (
+                {filteredLinks.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-gray-500">
-                      No tasks found. Create your first task!
+                    <td colSpan={4} className="py-8 text-center text-gray-500">
+                      No links found. Add your first YouTube link!
                     </td>
                   </tr>
                 ) : (
-                  filteredTasks.map((task) => (
+                  filteredLinks.map((link) => (
                     <tr
-                      key={task.id}
+                      key={link.id}
                       className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                              task.status === "completed"
-                                ? "bg-green-100"
-                                : task.status === "in_progress"
-                                ? "bg-orange-100"
-                                : "bg-yellow-100"
-                            }`}
-                          >
-                            <span className="text-sm">
-                              {getStatusIcon(task.status)}
-                            </span>
-                          </div>
+                          {extractVideoId(link.youtube_url) && (
+                            <img
+                              src={`https://img.youtube.com/vi/${extractVideoId(
+                                link.youtube_url
+                              )}/default.jpg`}
+                              alt="Thumbnail"
+                              className="w-16 h-12 object-cover rounded flex-shrink-0"
+                            />
+                          )}
                           <div className="min-w-0">
                             <div className="font-medium text-gray-900 text-sm lg:text-base truncate">
-                              {task.task_name}
+                              {link.title}
                             </div>
-                            <div className="text-xs lg:text-sm text-gray-500 truncate max-w-[200px]">
-                              {task.task_description}
-                            </div>
+                            {link.notes && (
+                              <div className="text-xs lg:text-sm text-gray-500 truncate max-w-[200px]">
+                                {link.notes}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4 hidden md:table-cell">
-                        <span className="text-gray-700 text-sm">
-                          {task.project_name}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 hidden lg:table-cell">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
-                          {task.repository_branch}
-                        </code>
+                        <a
+                          href={link.youtube_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-red-600 hover:text-red-800 text-sm truncate block max-w-[200px]"
+                        >
+                          {link.youtube_url}
+                        </a>
                       </td>
                       <td className="py-4 px-4">
                         <span
                           className={`inline-flex items-center px-2 py-1 lg:px-2.5 lg:py-0.5 rounded-full text-xs font-medium ${getStatusStyle(
-                            task.status
+                            link.status
                           )}`}
                         >
-                          {getStatusIcon(task.status)}{" "}
-                          {getStatusLabel(task.status)}
+                          {getStatusLabel(link.status)}
                         </span>
-                      </td>
-                      <td className="py-4 px-4 text-gray-600 text-sm lg:text-base hidden sm:table-cell">
-                        {new Date(task.deadline).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-1 lg:gap-2">
                           <button
-                            onClick={() => handleViewTask(task)}
+                            onClick={() => handleViewLink(link)}
                             className="text-blue-600 hover:text-blue-800 text-xs lg:text-sm font-medium"
                           >
                             View
                           </button>
-
                           <button
-                            onClick={() => handleDeleteTask(task.id)}
+                            onClick={() => handleDeleteLink(link.id)}
                             className="text-red-600 hover:text-red-800 text-xs lg:text-sm font-medium"
                           >
                             Delete
@@ -769,6 +891,48 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 transition-all duration-300 ${
+            toast.type === "success"
+              ? "bg-green-500 text-white"
+              : "bg-red-500 text-white"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          )}
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }
