@@ -176,12 +176,10 @@ When a YouTube link is created, it's automatically sent to your configured n8n w
 
 ```json
 {
-  "id": 1,
-  "user_id": 1,
+  "use": "transcript", //for transcript any executes storage in the database for RAG
   "title": "Video title",
   "youtube_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
-  "notes": "Optional notes about this video",
-  "created_at": "2024-01-01T00:00:00.000Z"
+  "email": "testemail@gmail.com"
 }
 ```
 

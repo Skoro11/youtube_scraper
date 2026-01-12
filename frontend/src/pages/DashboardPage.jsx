@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navbar } from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,7 +8,10 @@ import {
   editLink,
   getTranscript,
   updateLinkStatus,
+  sendToWebhookWithChat,
 } from "../services/taskService";
+import "@n8n/chat/style.css";
+import { createChat } from "@n8n/chat";
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,7 +22,8 @@ export default function DashboardPage() {
   const [links, setLinks] = useState([]);
   const [isTranscriptLoading, setIsTranscriptLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
-  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(true);
+  const [isCreateLoading, setIsCreateLoading] = useState(false);
   const [user, setUser] = useState({
     id: null,
     email: "",
@@ -68,6 +72,7 @@ export default function DashboardPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setIsCreateLoading(true);
 
     try {
       const response = await createLink(
@@ -79,6 +84,55 @@ export default function DashboardPage() {
 
       const newLink = response.data.link;
       setLinks((prev) => [newLink, ...prev]);
+
+      // Immediately send to webhook with use: "chat"
+      try {
+        const webhookResponse = await sendToWebhookWithChat(
+          user.email,
+          formData.title,
+          formData.youtube_url
+        );
+
+        if (webhookResponse.status === 200) {
+          await updateLinkStatus(newLink.id, "processed");
+          setLinks((prev) =>
+            prev.map((link) =>
+              link.id === newLink.id ? { ...link, status: "processed" } : link
+            )
+          );
+          setToast({
+            show: true,
+            message: "Link added and sent to webhook successfully!",
+            type: "success",
+          });
+        } else {
+          await updateLinkStatus(newLink.id, "failed");
+          setLinks((prev) =>
+            prev.map((link) =>
+              link.id === newLink.id ? { ...link, status: "failed" } : link
+            )
+          );
+          setToast({
+            show: true,
+            message: "Link added but webhook failed",
+            type: "error",
+          });
+        }
+      } catch (webhookError) {
+        console.error("Webhook error:", webhookError);
+        await updateLinkStatus(newLink.id, "failed");
+        setLinks((prev) =>
+          prev.map((link) =>
+            link.id === newLink.id ? { ...link, status: "failed" } : link
+          )
+        );
+        setToast({
+          show: true,
+          message: "Link added but webhook failed",
+          type: "error",
+        });
+      }
+
       setFormData({
         id: null,
         title: "",
@@ -86,9 +140,12 @@ export default function DashboardPage() {
         notes: "",
       });
       setIsModalOpen(false);
+      setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
     } catch (error) {
       console.error("Failed to create link:", error);
       alert("Failed to create link. Please try again.");
+    } finally {
+      setIsCreateLoading(false);
     }
   }
 
@@ -179,9 +236,6 @@ export default function DashboardPage() {
     setIsTranscriptLoading(true);
     try {
       const response = await getTranscript(email, title, youtube_url);
-      console.log("SendHookItems", email, title, youtube_url);
-      console.log("Response from n8n", response);
-
       if (response.status === 200) {
         await updateLinkStatus(linkId, "processed");
         setLinks((prev) =>
@@ -228,41 +282,27 @@ export default function DashboardPage() {
     }
   }
 
-  // Open chat - sends webhook and redirects to n8n chat page
-  async function handleOpenChat(link) {
-    setIsChatLoading(true);
-    try {
-      const response = await getTranscript(
-        user.email,
-        link.title,
-        link.youtube_url
-      );
-      /* const response = "Some response"; */
-      /*  console.log("Some response", response); */
-      if (response.status === 200) {
-        setIsViewModalOpen(false);
-        setSelectedLink(null);
-        // Redirect to n8n chat page
-        window.open(import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL, "_blank");
-      } else {
-        setToast({
-          show: true,
-          message: "Failed to initialize chat",
-          type: "error",
-        });
-      }
-    } catch (error) {
-      console.error("Error initializing chat:", error);
-      setToast({
-        show: true,
-        message: "Error connecting to chat",
-        type: "error",
+  // Initialize n8n chat when modal opens
+  useEffect(() => {
+    if (isChatModalOpen) {
+      createChat({
+        webhookUrl: import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL,
+        mode: "window",
+        showWelcomeScreen: false,
+        initialMessages: [
+          "Hi there! What do you wanna know about your videos?",
+        ],
       });
-    } finally {
-      setIsChatLoading(false);
-      setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
     }
-  }
+
+    // Cleanup when modal closes
+    return () => {
+      const chatWidget = document.querySelector(".n8n-chat");
+      if (chatWidget) {
+        chatWidget.remove();
+      }
+    };
+  }, [isChatModalOpen]);
 
   const filteredLinks =
     filter === "all" ? links : links.filter((link) => link.status === filter);
@@ -454,15 +494,43 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    disabled={isCreateLoading}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    disabled={isCreateLoading}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Add Link
+                    {isCreateLoading ? (
+                      <>
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      "Add Link"
+                    )}
                   </button>
                 </div>
               </form>
@@ -609,54 +677,6 @@ export default function DashboardPage() {
                       </>
                     ) : (
                       "Get transcript"
-                    )}
-                  </button>
-                  <button
-                    onClick={() => handleOpenChat(selectedLink)}
-                    disabled={isChatLoading}
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isChatLoading ? (
-                      <>
-                        <svg
-                          className="animate-spin h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                          />
-                        </svg>
-                        Chat
-                      </>
                     )}
                   </button>
                 </div>

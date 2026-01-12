@@ -14,6 +14,7 @@
     "test:all": "node tests/api.test.js && node tests/user.test.js && node tests/webhook.test.js && node tests/e2e.test.js"
   },
   "dependencies": {
+    "@n8n/chat": "^1.4.0",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

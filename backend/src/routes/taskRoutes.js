@@ -16,8 +16,8 @@ router.post("/", createLinkController);
 // GET /links/:userId - Get all links for a user
 router.get("/:userId", getLinksController);
 
-// GET /links/:linkId/:userId - Get single link
-router.get("/:linkId/:userId", getLinkController);
+/* // GET /links/:linkId/:userId - Get single link
+router.get("/:linkId/:userId", getLinkController); */
 
 // PUT /links/:linkId - Update link
 router.put("/:linkId", updateLinkController);
