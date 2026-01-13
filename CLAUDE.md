@@ -65,13 +65,81 @@ Use `backend/tests/rest.http` with VS Code REST Client extension for manual API 
 
 ### Frontend Structure
 
-- **App.jsx** - React Router setup with two routes: `/` (Dashboard) and `/login`
-- **pages/** - Main page components (DashboardPage, LoginPage)
-- **components/** - Reusable UI (Navbar)
-- **services/** - API communication via axios
-  - `axiosInstance.js` - Configured axios with base URL from `VITE_API_URL`
-  - `authService.js` - User registration and login calls
-  - `taskService.js` - YouTube link CRUD, transcript fetching, status updates
+```
+frontend/src/
+├── components/
+│   ├── common/           # Reusable UI components
+│   │   ├── Modal.jsx
+│   │   ├── Toast.jsx
+│   │   ├── StatusBadge.jsx
+│   │   └── LoadingSpinner.jsx
+│   ├── dashboard/        # Dashboard-specific components
+│   │   ├── FilterCards.jsx
+│   │   ├── LinksTable.jsx
+│   │   ├── LinkTableRow.jsx
+│   │   └── modals/
+│   │       ├── ViewLinkModal.jsx
+│   │       ├── CreateLinkModal.jsx
+│   │       └── EditLinkModal.jsx
+│   └── Navbar.jsx
+├── constants/
+│   └── status.js         # LINK_STATUS, STATUS_CONFIG, FILTER_OPTIONS
+├── hooks/
+│   ├── useAuth.js        # Authentication state management
+│   ├── useLinks.js       # YouTube links CRUD operations
+│   ├── useToast.js       # Toast notification management
+│   ├── useLinkForm.js    # Form state for link creation/editing
+│   └── useN8nChat.js     # n8n chat widget integration
+├── pages/
+│   ├── DashboardPage.jsx # Main dashboard (container component)
+│   └── LoginPage.jsx     # Login/registration page
+├── services/
+│   ├── axiosInstance.js  # Configured axios with base URL
+│   ├── authService.js    # User registration and login
+│   └── taskService.js    # YouTube link CRUD, webhooks
+├── utils/
+│   ├── youtube.js        # extractVideoId(), getThumbnailUrl()
+│   ├── status.js         # getStatusStyle(), getStatusLabel()
+│   └── date.js           # formatDate()
+├── App.jsx               # React Router setup
+└── main.jsx              # Entry point
+```
+
+#### Key Components
+
+**Common Components (`components/common/`):**
+- `Modal` - Generic modal wrapper with title, close button, content
+- `Toast` - Notification component (success/error states)
+- `StatusBadge` - Status display badge with styling
+- `LoadingSpinner` - SVG-based loading spinner
+
+**Dashboard Components (`components/dashboard/`):**
+- `FilterCards` - Filter UI showing link counts (All/Processed/Failed)
+- `LinksTable` - Table displaying all user's YouTube links
+- `LinkTableRow` - Individual row with thumbnail, URL, status, actions
+- Modals for CRUD operations (View, Create, Edit)
+
+#### Custom Hooks (`hooks/`)
+
+- `useAuth` - Retrieves user from localStorage, redirects if not authenticated
+- `useLinks` - Manages link CRUD, filtering, webhook calls (sendWebhook, sendWebhookForChat)
+- `useToast` - Toast visibility and auto-hide timeout
+- `useLinkForm` - Form state with handleInputChange, setFormFromLink, resetForm
+- `useN8nChat` - Initializes embedded n8n chat widget
+
+#### Utilities (`utils/`)
+
+- `youtube.js` - Extract video IDs, generate thumbnail URLs
+- `status.js` - Get Tailwind styles and labels for status values
+- `date.js` - Date formatting utilities
+
+#### Constants (`constants/status.js`)
+
+```javascript
+LINK_STATUS = { PENDING, SENT, PROCESSED, FAILED }
+STATUS_CONFIG = { [status]: { label, style } }
+FILTER_OPTIONS = { ALL, PROCESSED, FAILED }
+```
 
 ### Database Schema (PostgreSQL)
 
@@ -105,14 +173,20 @@ When user clicks "Get transcript", the frontend POSTs to `VITE_N8N_WEBHOOK_URL`:
 {
   "email": "user@example.com",
   "title": "Video title",
-  "youtube_url": "https://youtube.com/watch?v=..."
+  "youtube_url": "https://youtube.com/watch?v=...",
+  "use": "transcript"
 }
 ```
 
-### Chat Webhook
-When user clicks "Chat", the frontend:
-1. POSTs to `VITE_N8N_WEBHOOK_URL` to send video data
-2. Opens `VITE_N8N_CHAT_WEBHOOK_URL` in a new tab for AI chat
+### Embedded Chat Widget (RAG Integration)
+The application uses `@n8n/chat` to embed a chat widget directly in the dashboard:
+
+- **Initialization**: The `useN8nChat` hook initializes the widget when a processed link is available
+- **Webhook URL**: Configured via `VITE_N8N_CHAT_WEBHOOK_URL`
+- **Context**: Passes video metadata (title, URL) to the AI for context-aware responses
+- **Cleanup**: Widget is removed when navigating away from the dashboard
+
+The chat widget allows users to have AI-powered conversations about their processed YouTube videos.
 
 ## Environment Variables
 
@@ -145,4 +219,42 @@ VITE_N8N_CHAT_WEBHOOK_URL=https://your-n8n-instance.com/webhook/chat
 - **Backend**: Express.js (ES modules), PostgreSQL (pg client), Axios, express-validator
 - **Testing**: Vitest + Testing Library (frontend), Supertest (backend)
 - **Dev tools**: Nodemon (backend hot reload)
-- **Integration**: n8n webhooks for transcript fetching and AI chat
+- **Integration**: n8n webhooks for transcript fetching, @n8n/chat for embedded AI chat widget
+
+## Architectural Patterns
+
+### Frontend Architecture
+
+**Container/Presentational Pattern:**
+- `DashboardPage` is the container component managing all state
+- Child components (FilterCards, LinksTable, modals) are presentational
+
+**Custom Hooks for Logic Encapsulation:**
+- Business logic extracted from components into reusable hooks
+- Each hook has a single responsibility (auth, links, toast, form, chat)
+
+**Modal-Based UI:**
+- All CRUD operations happen in modal dialogs
+- Consistent UX pattern for Create, View, and Edit operations
+
+**Data Flow:**
+```
+DashboardPage (Container)
+├── useAuth (user state)
+├── useLinks (links CRUD & webhooks)
+├── useToast (notifications)
+├── useLinkForm (form state)
+├── useN8nChat (chat widget)
+└── Child Components
+    ├── FilterCards
+    ├── LinksTable → LinkTableRow
+    └── Modals (Create, View, Edit)
+```
+
+### Status Lifecycle
+
+Links follow this status progression:
+1. `pending` - Initial state when link created
+2. `sent` - After webhook sent to n8n
+3. `processed` - After n8n processing complete
+4. `failed` - If webhook or processing failed

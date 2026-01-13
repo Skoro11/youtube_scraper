@@ -1,5 +1,5 @@
 {
-  "name": "youtube-link-manager-backend",
+  "name": "youtube-link-transcriptor",
   "version": "1.0.0",
   "description": "YouTube Link Manager Backend",
   "main": "src/server.js",

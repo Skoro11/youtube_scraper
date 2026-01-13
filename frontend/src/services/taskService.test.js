@@ -4,10 +4,12 @@ import {
   editLink,
   getLinks,
   deleteLinkById,
-  resendWebhook,
+  getTranscript,
+  sendToWebhookWithChat,
   updateLinkStatus,
 } from './taskService';
 import api from './axiosInstance';
+import axios from 'axios';
 
 // Mock the axios instance
 vi.mock('./axiosInstance', () => ({
@@ -17,6 +19,13 @@ vi.mock('./axiosInstance', () => ({
     put: vi.fn(),
     delete: vi.fn(),
     patch: vi.fn(),
+  },
+}));
+
+// Mock axios for webhook calls
+vi.mock('axios', () => ({
+  default: {
+    post: vi.fn(),
   },
 }));
 
@@ -154,22 +163,51 @@ describe('taskService', () => {
     });
   });
 
-  describe('resendWebhook', () => {
-    it('should call API with correct endpoint', async () => {
-      const mockResponse = { data: { message: 'Webhook resent' } };
-      api.post.mockResolvedValue(mockResponse);
+  describe('getTranscript', () => {
+    it('should call webhook with correct data for transcript', async () => {
+      const mockResponse = { status: 200, data: { success: true } };
+      axios.post.mockResolvedValue(mockResponse);
 
-      const result = await resendWebhook(1, 1);
+      const result = await getTranscript('test@example.com', 'Test Video', 'https://youtube.com/watch?v=test');
 
-      expect(api.post).toHaveBeenCalledWith('/api/tasks/1/1/resend');
+      expect(axios.post).toHaveBeenCalledWith(expect.any(String), {
+        email: 'test@example.com',
+        title: 'Test Video',
+        youtube_url: 'https://youtube.com/watch?v=test',
+        use: 'transcript',
+      });
       expect(result).toEqual(mockResponse);
     });
 
-    it('should throw error when resend fails', async () => {
+    it('should throw error when webhook fails', async () => {
       const mockError = new Error('Webhook failed');
-      api.post.mockRejectedValue(mockError);
+      axios.post.mockRejectedValue(mockError);
 
-      await expect(resendWebhook(1, 1)).rejects.toThrow('Webhook failed');
+      await expect(getTranscript('test@example.com', 'Test', 'https://youtube.com')).rejects.toThrow('Webhook failed');
+    });
+  });
+
+  describe('sendToWebhookWithChat', () => {
+    it('should call webhook with correct data for chat', async () => {
+      const mockResponse = { status: 200, data: { success: true } };
+      axios.post.mockResolvedValue(mockResponse);
+
+      const result = await sendToWebhookWithChat('test@example.com', 'Test Video', 'https://youtube.com/watch?v=test');
+
+      expect(axios.post).toHaveBeenCalledWith(expect.any(String), {
+        email: 'test@example.com',
+        title: 'Test Video',
+        youtube_url: 'https://youtube.com/watch?v=test',
+        use: 'chat',
+      });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw error when webhook fails', async () => {
+      const mockError = new Error('Webhook failed');
+      axios.post.mockRejectedValue(mockError);
+
+      await expect(sendToWebhookWithChat('test@example.com', 'Test', 'https://youtube.com')).rejects.toThrow('Webhook failed');
     });
   });
 

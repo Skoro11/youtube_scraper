@@ -46,11 +46,11 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
   });
 
-  it('should have default email value', () => {
+  it('should have empty default email value', () => {
     renderLoginPage();
 
     const emailInput = screen.getByLabelText('Email Address');
-    expect(emailInput).toHaveValue('testemail@gmail.com');
+    expect(emailInput).toHaveValue('');
   });
 
   it('should update email on input change', () => {
@@ -72,11 +72,14 @@ describe('LoginPage', () => {
 
     renderLoginPage();
 
+    const emailInput = screen.getByLabelText('Email Address');
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+
     const loginButton = screen.getByRole('button', { name: 'Login' });
     fireEvent.click(loginButton);
 
     await waitFor(() => {
-      expect(authService.loginUser).toHaveBeenCalledWith('testemail@gmail.com');
+      expect(authService.loginUser).toHaveBeenCalledWith('test@example.com');
     });
 
     await waitFor(() => {
@@ -91,6 +94,9 @@ describe('LoginPage', () => {
 
     renderLoginPage();
 
+    const emailInput = screen.getByLabelText('Email Address');
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+
     const loginButton = screen.getByRole('button', { name: 'Login' });
     fireEvent.click(loginButton);
 
@@ -104,11 +110,14 @@ describe('LoginPage', () => {
 
     renderLoginPage();
 
+    const emailInput = screen.getByLabelText('Email Address');
+    fireEvent.change(emailInput, { target: { value: 'newuser@example.com' } });
+
     const registerButton = screen.getByRole('button', { name: 'Register' });
     fireEvent.click(registerButton);
 
     await waitFor(() => {
-      expect(authService.registerUser).toHaveBeenCalledWith('testemail@gmail.com');
+      expect(authService.registerUser).toHaveBeenCalledWith('newuser@example.com');
       expect(global.alert).toHaveBeenCalledWith('Successfully registered');
     });
   });
@@ -117,6 +126,9 @@ describe('LoginPage', () => {
     authService.registerUser.mockRejectedValue(new Error('Registration failed'));
 
     renderLoginPage();
+
+    const emailInput = screen.getByLabelText('Email Address');
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
 
     const registerButton = screen.getByRole('button', { name: 'Register' });
     fireEvent.click(registerButton);
@@ -147,5 +159,18 @@ describe('LoginPage', () => {
       expect(storedUser._id).toBe(123);
       expect(storedUser.email).toBe('stored@example.com');
     });
+  });
+
+  it('should display placeholder text', () => {
+    renderLoginPage();
+
+    const emailInput = screen.getByLabelText('Email Address');
+    expect(emailInput).toHaveAttribute('placeholder', 'you@example.com');
+  });
+
+  it('should display subtitle text', () => {
+    renderLoginPage();
+
+    expect(screen.getByText('Enter your email to manage your YouTube links')).toBeInTheDocument();
   });
 });
