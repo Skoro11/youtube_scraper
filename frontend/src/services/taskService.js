@@ -52,15 +52,30 @@ export async function deleteLinkById(link_id) {
 
 export async function getTranscript(email, title, youtube_url) {
   try {
-    console.log(import.meta.env.VITE_N8N_WEBHOOK_URL);
     const response = await axios.post(import.meta.env.VITE_N8N_WEBHOOK_URL, {
       email: email,
       title: title,
       youtube_url: youtube_url,
+      use: "transcript",
     });
     return response;
   } catch (error) {
     console.log("Get trascript error", error.message);
+    throw error;
+  }
+}
+
+export async function sendToWebhookWithChat(email, title, youtube_url) {
+  try {
+    const response = await axios.post(import.meta.env.VITE_N8N_WEBHOOK_URL, {
+      email: email,
+      title: title,
+      youtube_url: youtube_url,
+      use: "chat",
+    });
+    return response;
+  } catch (error) {
+    console.log("Send to webhook error", error.message);
     throw error;
   }
 }

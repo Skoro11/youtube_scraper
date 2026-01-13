@@ -29,7 +29,12 @@
       "Bash(npm install:*)",
       "Bash(echo:*)",
       "WebFetch(domain:docs.n8n.io)",
-      "Bash(git add -A)"
+      "Bash(git add -A)",
+      "Bash(ls:*)",
+      "Bash(claude mcp list)",
+      "Bash(claude mcp add:*)",
+      "mcp__github__get_me",
+      "Bash(git add:*)"
     ]
   },
   "enableAllProjectMcpServers": false,

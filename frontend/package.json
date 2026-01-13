@@ -1,5 +1,5 @@
 {
-  "name": "pdf-management-frontend",
+  "name": "youtube-video-transcription",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@n8n/chat": "^1.4.0",
     "axios": "^1.13.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

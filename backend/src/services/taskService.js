@@ -127,16 +127,3 @@ export async function updateLinkStatus(link_id, status) {
 
   return result.rows[0] || null;
 }
-
-export async function sendWebhook(email, title, youtube_url) {
-  try {
-    const response = await axios.post(process.env.N8N_WEBHOOK_URL, {
-      email: email,
-      title: title,
-      youtube_url: youtube_url,
-    });
-    console.log("Response webhook", response);
-  } catch (error) {
-    console.log.log("Error sendWebHook", error.message);
-  }
-}
